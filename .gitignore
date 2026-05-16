@@ -1,0 +1,12 @@
+# Data raw (too large for GitHub)
+data/raw/
+data/processed/
+
+# Python
+__pycache__/
+*.pyc
+*.log
+
+# IDE
+.vscode/
+.idea/
