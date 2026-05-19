@@ -80,25 +80,69 @@ MODELOS_MB = [
     (r"ACCELO",        "ACCELO"),
     (r"ATEGO",         "ATEGO"),
     (r"AXOR",          "AXOR"),
-    # Por prefijo VIN (decodificación para buses en Perú)
-    # WD3 = Sprinter (fabricación Alemania)
-    (r"^WD3",          "SPRINTER"),
-    # 9BM693 = Sprinter (fabricación Brasil, W906)
-    (r"^9BM693",       "SPRINTER"),
-    # 9BM695 = Sprinter bus (carrocería distinta)
-    (r"^9BM695",       "SPRINTER"),
-    # 9BM345 = LO series (microbús)
+    (r"ACTROS",        "ACTROS"),
+    (r"AROCS",         "AROCS"),
+
+    # ── Prefijos VIN Mercedes-Benz ──────────────────────────────────────────
+    # Sprinter (todos los orígenes)
+    (r"^WD3",          "SPRINTER"),       # Alemania
+    (r"^9BM693",       "SPRINTER"),       # Brasil W906
+    (r"^9BM695",       "SPRINTER"),       # Brasil (bus)
+    (r"^9BM634",       "SPRINTER"),       # Brasil (nueva gen 415/515) — 2,309 unid.
+    (r"^8AC906",       "SPRINTER"),       # Argentina W906 — 1,022 unid.
+    (r"^8AC907",       "SPRINTER"),       # Argentina W907/VS30 (2019+) — 745 unid.
+    (r"^8AC904",       "SPRINTER"),       # Argentina W904 (clásico) — 134 unid.
+    (r"^8AC903",       "SPRINTER"),       # Argentina W903 (clásico) — 86 unid.
+    (r"^W1V907",       "SPRINTER"),       # España (Vitoria) nueva gen — 214 unid.
+
+    # Accelo (camión liviano, Brasil/México)
+    (r"^9BM688",       "ACCELO"),         # Brasil 815/1016 — 1,688 unid.
+    (r"^9BM682",       "ACCELO"),         # Brasil variante — 29 unid.
+    (r"^3AM688",       "ACCELO"),         # México — 11 unid.
+
+    # Atego (camión mediano)
+    (r"^9BM384",       "ATEGO"),          # Brasil
+    (r"^9BM386",       "ATEGO"),          # Brasil
+    (r"^9BM979",       "ATEGO"),          # Brasil 2426/2430 — 1,050 unid.
+    (r"^W1FKHL",       "ATEGO"),          # Turquía (Aksaray) — 190 unid.
+    (r"^W1EKHN",       "ATEGO"),          # Turquía — 10 unid.
+    (r"^MHL684",       "ATEGO"),          # India — 13 unid.
+    (r"^9BM958",       "ATEGO ESPECIAL"), # Brasil (carrocería especial)
+
+    # Actros (camión pesado / tractocamión)
+    (r"^W1F9HP",       "ACTROS"),         # Turquía (Aksaray) — 354 unid.
+    (r"^WDA9HP",       "ACTROS"),         # Alemania/Turquía — 148 unid.
+    (r"^WDF943",       "ACTROS"),         # Alemania (Wörth) — 38 unid.
+    (r"^WDAKHC",       "ACTROS"),         # Alemania — 25 unid.
+    (r"^W1T963",       "ACTROS"),         # Turquía — 11 unid.
+    (r"^W1ECHP",       "ACTROS"),         # Turquía — 15 unid.
+
+    # Arocs (camión pesado construcción/minería)
+    (r"^W1FNHL",       "AROCS"),          # Turquía — 129 unid.
+
+    # Axor (camión pesado, descontinuado)
+    (r"^9BM696",       "AXOR"),           # Brasil (pesado) — 107 unid.
+    (r"^9BM951",       "AXOR"),           # Brasil — 156 unid.
+
+    # OF Series (bus urbano/interurbano)
+    (r"^9BM388",       "OF SERIES"),      # Brasil (ya existía)
+    (r"^9BM664",       "OF SERIES"),      # Brasil OF 1721 — 193 unid.
+    (r"^9BM382",       "OF SERIES"),      # Brasil OF 1519/1721 — 149 unid.
+    (r"^9BM368",       "OF SERIES"),      # Brasil OF 1318/1418 — 52 unid.
+
+    # LO Series (microbús)
     (r"^9BM345",       "LO SERIES"),
-    # 9BM384 = camiones medianos (Atego)
-    (r"^9BM384",       "ATEGO"),
-    # 9BM386 = Atego
-    (r"^9BM386",       "ATEGO"),
-    # 9BM388 = OF (bus urbano)
-    (r"^9BM388",       "OF SERIES"),
-    # 9BM958 = camión basura / sanitation (Atego con carrocería especial)
-    (r"^9BM958",       "ATEGO ESPECIAL"),
-    # WDB = general Mercedes-Benz (Alemania)
+
+    # MB India (BharatBenz / Fuso)
+    (r"^MEC00",        "MB INDIA"),       # India (Chennai) — 201 unid.
+
+    # Importados genéricos (fallback — DESPUÉS de los específicos)
     (r"^WDB",          "MERCEDES-BENZ (importado)"),
+    (r"^WDD",          "MERCEDES-BENZ (importado)"),
+    (r"^W1F",          "MERCEDES-BENZ (importado)"),  # Turquía restante
+    (r"^WDA",          "MERCEDES-BENZ (importado)"),  # Alemania restante
+    (r"^WDF",          "MERCEDES-BENZ (importado)"),  # Wörth restante
+    (r"^8AC",          "SPRINTER"),                   # Argentina restante
 ]
 
 MODELOS_RENAULT = [
@@ -139,6 +183,22 @@ MODELOS_RENAULT = [
     (r"^8A18SR",       "MASTER"),
     # VF1 = Renault Francia genérico
     (r"^VF1",          "RENAULT (importado)"),
+    # VF6 restantes (no capturados arriba) = Master variantes Francia
+    (r"^VF6",          "MASTER"),
+    # 93YH, 93YR = Master variantes Brasil (no capturadas arriba)
+    (r"^93Y",          "MASTER"),
+    # 3BR = Renault Brasil
+    (r"^3BR",          "MASTER"),
+    # VSY = Renault (código de planta)
+    (r"^VSY",          "MASTER"),
+    # Códigos internos/fleet (REV, REP, MMI, MN, STK, RD) — asumir Master
+    # (en Perú, Renault que no sea Kangoo/Trafic = Master con alta probabilidad)
+    (r"^REV\d",        "MASTER"),
+    (r"^REP\d",        "MASTER"),
+    (r"^MMI\d",        "MASTER"),
+    (r"^MN\d",         "MASTER"),
+    (r"^STK\d",        "MASTER"),
+    (r"^RD\d",         "MASTER"),
 ]
 
 # ── Clasificación de clase vehicular (minibús / microbús) ─────────────────────
@@ -184,6 +244,38 @@ ZONA_COMERCIAL = {
     "SUR": ["AREQUIPA", "MOQUEGUA", "TACNA", "PUNO", "CUSCO", "APURIMAC"],
     "ORIENTE": ["LORETO", "UCAYALI", "MADRE DE DIOS", "AMAZONAS", "SAN MARTIN"],
 }
+
+# ── Distribución geográfica real del parque vehicular (Ómnibus+Rural+Camión)──
+# Fuente: Comunidad Andina / MTC-SUNARP, Stock 2023
+# Se usa para redistribuir vehículos del dataset pasajeros cuyo departamento
+# es domicilio fiscal (sesgado a Lima), NO zona de operación.
+DISTRIBUCION_GEO_REAL = {
+    "LIMA": 0.624763,
+    "AREQUIPA": 0.080058,
+    "LA LIBERTAD": 0.068896,
+    "CUSCO": 0.032933,
+    "JUNIN": 0.030107,
+    "PUNO": 0.027814,
+    "LAMBAYEQUE": 0.027017,
+    "PIURA": 0.022552,
+    "TACNA": 0.022319,
+    "CAJAMARCA": 0.014012,
+    "ANCASH": 0.012017,
+    "ICA": 0.007419,
+    "HUANUCO": 0.005964,
+    "SAN MARTIN": 0.005150,
+    "MOQUEGUA": 0.004376,
+    "UCAYALI": 0.003296,
+    "PASCO": 0.003210,
+    "AYACUCHO": 0.002138,
+    "LORETO": 0.001972,
+    "APURIMAC": 0.001415,
+    "TUMBES": 0.001061,
+    "AMAZONAS": 0.000680,
+    "MADRE DE DIOS": 0.000425,
+    "HUANCAVELICA": 0.000408,
+}
+
 
 def region_natural_de_dept(depto: str) -> str:
     depto = str(depto).upper().strip()

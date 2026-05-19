@@ -12,6 +12,7 @@ import sys
 import logging
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -19,6 +20,7 @@ from config import (
     DATA_RAW, DATA_PROC,
     region_natural_de_dept, zona_comercial_de_dept,
     ANNO_CORTE, rango_antiguedad,
+    DISTRIBUCION_GEO_REAL,
 )
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
@@ -69,6 +71,59 @@ def cargar_padron_ruc(path: Path) -> pd.DataFrame | None:
     except Exception as e:
         log.error(f"Error cargando padrón RUC: {e}")
         return None
+
+
+def redistribuir_geo_pasajeros(df: pd.DataFrame) -> pd.DataFrame:
+    """Corrige el sesgo geográfico del dataset de pasajeros.
+
+    El campo DEPARTAMENTO en el dataset de pasajeros del MTC corresponde al
+    domicilio fiscal de la empresa (sesgado ~88 % a Lima), NO a la zona de
+    operación del vehículo.
+
+    Se redistribuyen los vehículos de pasajeros con departamento = LIMA o
+    vacío usando la distribución real del parque vehicular peruano
+    (Comunidad Andina / MTC-SUNARP, stock 2023: ómnibus + rural + camión),
+    definida en config.DISTRIBUCION_GEO_REAL.
+    """
+    if not DISTRIBUCION_GEO_REAL:
+        log.warning("DISTRIBUCION_GEO_REAL vacía; redistribución cancelada.")
+        return df
+
+    deptos = list(DISTRIBUCION_GEO_REAL.keys())
+    probs = np.array(list(DISTRIBUCION_GEO_REAL.values()))
+    probs = probs / probs.sum()  # asegurar que sume 1.0
+
+    # ── Identificar vehículos de pasajeros con geo no confiable ─────────────
+    mask_pasajeros = df["fuente_datos"] == "mtc_pasajeros"
+    mask_lima_o_vacio = (
+        df["departamento"].isin(["LIMA", ""])
+        | df["departamento"].isna()
+    )
+    mask_reasignar = mask_pasajeros & mask_lima_o_vacio
+    n_reasignar = mask_reasignar.sum()
+
+    if n_reasignar == 0:
+        log.info("Redistribución geográfica: no hay registros que reasignar.")
+        return df
+
+    # ── Reasignar proporcionalmente (semilla fija = reproducible) ───────────
+    rng = np.random.default_rng(seed=42)
+    nuevos_deptos = rng.choice(deptos, size=n_reasignar, p=probs)
+
+    df.loc[mask_reasignar, "departamento"] = nuevos_deptos
+    df.loc[mask_reasignar, "provincia"] = ""
+    df.loc[mask_reasignar, "distrito"] = ""
+
+    # Marcar registros redistribuidos para trazabilidad
+    df["geo_estimada"] = False
+    df.loc[mask_reasignar, "geo_estimada"] = True
+
+    log.info(f"Redistribución geográfica: {n_reasignar} vehículos de pasajeros "
+             f"reasignados con distribución Comunidad Andina 2023.")
+    log.info("  Nueva distribución (pasajeros reasignados):")
+    log.info(pd.Series(nuevos_deptos).value_counts().head(15).to_string())
+
+    return df
 
 
 def enriquecer_geografia(df: pd.DataFrame) -> pd.DataFrame:
@@ -156,6 +211,9 @@ def main():
         if "departamento" in df.columns and "departamento_empresa" not in df.columns:
             df["departamento_empresa"] = df["departamento"]
         log.info("Pipeline continuando sin enriquecimiento SUNAT.")
+
+    # ── Redistribución geográfica (corrige sesgo fiscal del dataset pasajeros)
+    df = redistribuir_geo_pasajeros(df)
 
     # ── Enriquecimiento geográfico ────────────────────────────────────────────
     df = enriquecer_geografia(df)
