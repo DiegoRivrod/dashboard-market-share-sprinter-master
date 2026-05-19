@@ -32,9 +32,10 @@ PADRON_RUC_PATH = DATA_RAW / "padron_ruc_sunat.txt"
 
 def cargar_padron_ruc(path: Path) -> pd.DataFrame | None:
     """
-    Carga el padrón RUC de SUNAT (formato pipe-separated).
+    Carga el padrón RUC de SUNAT (CSV con header).
     Disponible en: https://www.datosabiertos.gob.pe/dataset/padron-ruc-sunat
-    Archivo grande (~2 GB), se lee en chunks y se filtra.
+    Archivo grande (~3 GB), se lee en chunks y se filtra.
+    Columnas del archivo: RUC,Estado,Condicion,Tipo,...,UBIGEO,Departamento,Provincia,Distrito,...
     """
     if not path.exists():
         log.warning(f"Padrón RUC no encontrado en {path}.")
@@ -45,22 +46,28 @@ def cargar_padron_ruc(path: Path) -> pd.DataFrame | None:
 
     log.info(f"Cargando padrón RUC desde {path.name} (puede tardar varios minutos)...")
     try:
-        # El archivo SUNAT usa separador pipe y encoding latin-1
+        cols_usar = ["RUC", "Estado", "Condicion", "Tipo", "UBIGEO",
+                     "Departamento", "Provincia", "Distrito"]
         chunks = []
         for chunk in pd.read_csv(
             path,
-            sep="|",
+            sep=",",
             encoding="latin-1",
             dtype=str,
             chunksize=500_000,
-            usecols=[0, 1, 2, 3, 4, 5, 6],  # RUC, nombre, estado, tipo, ubigeo, ...
+            usecols=cols_usar,
             on_bad_lines="skip",
         ):
-            chunk.columns = [
-                "ruc", "razon_social", "estado_ruc",
-                "tipo_contribuyente", "ubigeo_sunat",
-                "departamento_sunat", "provincia_sunat",
-            ]
+            chunk = chunk.rename(columns={
+                "RUC": "ruc",
+                "Estado": "estado_ruc",
+                "Condicion": "condicion_ruc",
+                "Tipo": "tipo_contribuyente",
+                "UBIGEO": "ubigeo_sunat",
+                "Departamento": "departamento_sunat",
+                "Provincia": "provincia_sunat",
+                "Distrito": "distrito_sunat",
+            })
             chunks.append(chunk)
 
         df = pd.concat(chunks, ignore_index=True)
@@ -188,20 +195,26 @@ def main():
     if padron is not None and "ruc_empresa" in df.columns:
         # Filtrar padrón solo con los RUCs presentes en el dataset
         rucs_validos = set(df["ruc_empresa"].dropna().unique())
+        rucs_validos.discard("")
         padron_filtrado = padron[padron["ruc"].isin(rucs_validos)].copy()
         padron_filtrado = padron_filtrado.rename(columns={
-            "ruc":           "ruc_empresa",
-            "razon_social":  "razon_social_sunat",
-            "estado_ruc":    "estado_ruc",
-            "tipo_contribuyente": "tipo_contribuyente",
-            "departamento_sunat": "departamento_empresa",
+            "ruc":               "ruc_empresa",
+            "estado_ruc":        "estado_ruc",
+            "condicion_ruc":     "condicion_ruc",
+            "tipo_contribuyente":"tipo_contribuyente",
+            "departamento_sunat":"departamento_empresa",
             "provincia_sunat":   "provincia_empresa",
+            "distrito_sunat":    "distrito_empresa",
         })
         # Eliminar duplicados de RUC en el padrón
         padron_filtrado = padron_filtrado.drop_duplicates(subset=["ruc_empresa"])
         df = df.merge(padron_filtrado, on="ruc_empresa", how="left")
-        log.info(f"Cruce SUNAT completado. RUCs matcheados: "
-                 f"{df['estado_ruc'].notna().sum()} de {len(df)}")
+        matcheados = df["estado_ruc"].notna().sum()
+        log.info(f"Cruce SUNAT completado. RUCs matcheados: {matcheados:,} de {len(df):,}")
+        log.info(f"  Estado RUC:")
+        log.info(df["estado_ruc"].value_counts().head(5).to_string())
+        log.info(f"  Tipo contribuyente:")
+        log.info(df["tipo_contribuyente"].value_counts().head(5).to_string())
     else:
         # Sin padrón SUNAT: usar datos de empresa que vienen del MTC
         if "razon_social" in df.columns and "razon_social_sunat" not in df.columns:
